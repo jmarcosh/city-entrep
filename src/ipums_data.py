@@ -1,7 +1,5 @@
-import numpy as np
-import gzip
-from ipumspy import IpumsApiClient, UsaExtract, readers, ddi, BaseExtract
-from src.utils import load_config
+from ipumspy import IpumsApiClient, UsaExtract, readers
+from utils.load_config_files import load_config
 import os
 
 
