@@ -1,7 +1,4 @@
-import sys
-import os
-
-from config_files.snowflake_connection import export_data_from_sf
+from utils.snowflake_connection import export_data_from_sf
 
 cities_linkedin_query = """
 select location_raw, count(location_raw) cnt
