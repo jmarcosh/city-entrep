@@ -20,7 +20,7 @@ linkedin['cbsa'] = [cw.match_linkedin_city_to_cbsa(x, y) for x, y in zip(linkedi
 linkedin['id'] = cities_linkedin['LOCATION_RAW']
 linkedin['cnt'] = cities_linkedin['CNT']
 linkedin_crosswalk = (linkedin.merge(cw.county_map.drop_duplicates(subset=['cbsa']),
-                                     on='cbsa', how='left')[['id', 'cbsa', 'cbsa_code']])
+                                     on='cbsa', how='inner')[['id', 'cbsa', 'cbsa_code']])
 linkedin_crosswalk.to_csv('../files/linkedin_city_cbsa.csv', index=False)
 linkedin.to_csv('../files/linkedin_city_cbsa_analysis.csv', index=False)
 
