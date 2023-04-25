@@ -28,12 +28,12 @@ class LinkedinCrosswalk:
     #     self.census_table = census
 
     def read_and_process_gpt_file(self):
-        gpt_map = pd.read_csv('../files/gpt_linkedin_city_cbsa.csv')
+        gpt_map = pd.read_csv('../files/cbsa/gpt_linkedin_city_cbsa.csv')
         gpt_map['state_code'] = self.get_state_code(gpt_map['state'])
         self.gpt_map = gpt_map
 
     def read_and_process_county_cbsa_crosswalk(self):
-        county_cbsa = pd.read_csv('../files/county_cbsa.csv')
+        county_cbsa = pd.read_csv('../files/cbsa/county_cbsa.csv')
         county_cbsa = county_cbsa.drop_duplicates(subset=['county', 'state_name']).reset_index(drop=True)
         county_cbsa['state_code'] = self.get_state_code(county_cbsa['state_name'])
         county_cbsa['state'] = county_cbsa['cbsa'].str.rsplit(', ').str[1]
