@@ -24,7 +24,7 @@ sample({1})
 ;"""
 
 
-ipums_df = read_ipums_data('../../ipums_data/usa_00012.xml')
+ipums_df = read_ipums_data('../../ipums_data/usa_00013.xml')
 ipums_cbsa = preprocess_ipums_data(ipums_df)
 
 # Load LinkedIn data sample

@@ -46,7 +46,7 @@ class LinkedinCrosswalk:
             if isinstance(x, str):
                 x = x.replace(' metropolitan area', '').replace(' area', '')
                 try:
-                    state_code.append(us_state_to_abbrev.get(x.title()).lower())
+                    state_code.append(us_state_to_abbrev.get(x.title()))
                 except AttributeError:
                     state_code.append(None)
                     print(x)
@@ -55,12 +55,11 @@ class LinkedinCrosswalk:
         return state_code
 
     def match_linkedin_city_to_cbsa(self, linkedin_city, linkedin_state):
-        linkedin_city_tokens = re.split(r'\W', linkedin_city)
+        linkedin_city_tokens = re.split(r'\W', linkedin_city.lower())
         linkedin_city_tokens = [token for token in linkedin_city_tokens if token not in remove_words]
-        linkedin_city = ' '.join(linkedin_city_tokens)
         if len(linkedin_city_tokens) == 0:
             return None
-        census_cbsa = self.county_map
+        census_cbsa = self.county_map.drop_duplicates(subset='cbsa')
         if linkedin_state:
             census_cbsa = census_cbsa[census_cbsa['state'].str.contains(linkedin_state)].reset_index(drop=True)
         for i, r in census_cbsa.iterrows():
@@ -81,11 +80,11 @@ class LinkedinCrosswalk:
 
     def match_linkedin_city_using_county(self, linkedin_city, linkedin_state):
         try:
-            county = self.search.by_city_and_state(linkedin_city, linkedin_state.upper())[0].county
+            county = self.search.by_city_and_state(linkedin_city, linkedin_state)[0].county
             cbsa = self.county_map.loc[(self.county_map['county'] == county) &
-                                      (self.county_map['state_code'] == linkedin_state), 'cbsa'].item()
+                                       (self.county_map['state_code'] == linkedin_state), 'cbsa'].item()
         except Exception as E:
-            print(E)
+            print(linkedin_city, E)
             return None
         return cbsa
 
@@ -94,10 +93,18 @@ class LinkedinCrosswalk:
             gpt_mapping = self.gpt_map[self.gpt_map['state_code'] == linkedin_state]
         else:
             gpt_mapping = self.gpt_map
-        city = gpt_mapping.loc[gpt_mapping['city'] == linkedin_city, 'cbsa'].reset_index(drop=True)
+        city = gpt_mapping.loc[gpt_mapping['city'] == linkedin_city.lower(), 'cbsa'].reset_index(drop=True)
         if len(city) > 0:
             return city[0]
         return None
+
+    def create_crosswalk_from_city_and_state_df(self, df, path_title):
+        df['state_code'] = self.get_state_code(df['state'])
+        df['cbsa'] = [self.match_linkedin_city_to_cbsa(x, y) for x, y in zip(df['city'], df['state_code'])]
+        crosswalk = (df.merge(self.county_map.drop_duplicates(subset=['cbsa']),
+                              on='cbsa', how='inner')[['id', 'cbsa', 'cbsa_code']])
+        crosswalk.to_csv(f'{path_title}.csv', index=False)
+        df.to_csv(f'{path_title}_analysis.csv', index=False)
 
 
 def create_crosswalk_object():
