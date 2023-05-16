@@ -1,3 +1,4 @@
+import numpy as np
 from ipumspy import IpumsApiClient, UsaExtract, readers
 import pandas as pd
 
@@ -10,6 +11,10 @@ def read_ipums_data(file_path):
     location = file_path.rsplit('/', 1)[0] + '/'
     ipums_df = readers.read_microdata(ddi, location + ddi.file_description.filename)
     return ipums_df
+
+
+def weighted_mean(series, df, weights):
+    return np.average(series, weights=df.loc[series.index, weights])
 
 
 def _merge_state_county_fip(state, county):
@@ -38,17 +43,45 @@ def add_education_indicators_to_ipums_df(df):
 def convert_county_fips_to_cbsa(df):
     fips = [_merge_state_county_fip(x, y) for x, y in zip(df['STATEFIP'], df['COUNTYFIP'])]
     county_cbsa_cw = pd.read_csv(os.path.join(os.path.dirname(__file__), "../crosswalks/files/cbsa/county_cbsa.csv"))
+    """
+    The following codes were changed manually in the crosswalk
+    39150: Prescott Valley-Prescott, AZ -> 39140: Prescott, AZ
+    19430: Dayton-Kettering, OH -> 19380: Dayton, OH
+    """
     fips_cbsa_dict = county_cbsa_cw.set_index('fips')['cbsa_code'].to_dict()
     df['cbsa_code'] = [fips_cbsa_dict.get(fips) if cbsa == 0 else cbsa
                        for fips, cbsa in zip(fips, df['MET2013'])]
-    return df.merge(county_cbsa_cw[['cbsa_code', 'cbsa']].drop_duplicates(), on='cbsa_code', how='left')
+    df_cbsa = df.merge(county_cbsa_cw[['cbsa_code', 'cbsa']].drop_duplicates(), on='cbsa_code', how='left')
+    return df_cbsa.dropna(subset=['cbsa_code'])
+
+
+def add_aggregated_vars_to_ipums_df(df):
+    educ_entrep_ratios = df.groupby(['cbsa_code', 'cbsa']).agg({'ba': lambda x: weighted_mean(x, df, 'PERWT'),
+                                                                        'SELF': lambda x: weighted_mean(x, df, 'PERWT')})
+    educ_entrep_ratios.rename({'ba': 'baShare', 'SELF': 'selfShare'}, axis=1, inplace=True)
+    return df.merge(educ_entrep_ratios, on=['cbsa_code', 'cbsa'], how='left')
+
+
+def add_demographic_indicators_to_ipums_df(df):
+    df["FEMALE"] = df["SEX"] - 1
+    df["ASIAN"] = 0
+    df.loc[(df["RACE"] > 3) & (df["RACE"] < 7), "ASIAN"] = 1
+    df["BLACK"] = 0
+    df.loc[(df["RACE"] == 2), "BLACK"] = 1
+    df.loc[(df["HISPAN"] > 0), "HISPAN"] = 1
+    df["MARRIED"] = 0
+    df.loc[(df["MARST"] == 0) | (df["MARST"] == 1), "MARRIED"] = 1
+    df["AGE2"] = df["AGE"] ** 2
 
 
 def preprocess_ipums_data(df):
     df = df[df['CLASSWKRD'] > 0].reset_index(drop=True)
+    df = convert_county_fips_to_cbsa(df)
     add_inc_and_self_indicators_to_ipums_df(df)
     add_education_indicators_to_ipums_df(df)
-    return convert_county_fips_to_cbsa(df)
+    df = add_aggregated_vars_to_ipums_df(df)
+    add_demographic_indicators_to_ipums_df(df)
+    return df
 
 
 # # Get the DDI

@@ -5,10 +5,17 @@ from utils.load_config_files import load_config
 ipums = IpumsApiClient(load_config()['ipums_api_key'])
 
 # submit an extract request to the Microdata Extract API
+# extract = UsaExtract(
+#     ["us2021a"],
+#     ["STATEFIP", "COUNTYFIP", "MET2013", "CITY", "PERWT", "EDUCD", "CLASSWKRD", "OCC", "IND", "AGE", "LABFORCE"],
+#     description="Employment Status - City5"
+# )
+
 extract = UsaExtract(
     ["us2021a"],
-    ["STATEFIP", "COUNTYFIP", "MET2013", "CITY", "PERWT", "EDUCD", "CLASSWKRD", "OCC", "INDNAICS", "AGE", "LABFORCE"],
-    description="Employment Status - City4"
+    ["STATEFIP", "COUNTYFIP", "MET2013", "CITY", "PERWT", "EDUCD", "CLASSWKRD", "OCC", "IND", "AGE", "LABFORCE",
+     "SEX", "MARST", "RACE", "HISPAN"],
+    description="Sample with more variables"
 )
 ipums.submit_extract(extract)
 
